@@ -1,0 +1,35 @@
+workspace_only: true
+allow_test_generation: false
+allow_multi_file_edit: false
+allow_third_party_imports: false
+write_allowlist:
+  - "algorithm.py"
+explicit_test_write_allowlist:
+  - "tests/test_algorithm.py"
+deny_write_patterns:
+  - ".env"
+  - ".git/**"
+  - ".ssh/**"
+  - "**/*token*"
+  - "**/*secret*"
+  - "pyproject.toml"
+  - "configs/security.yaml"
+forbidden_code_patterns:
+  - "eval("
+  - "exec("
+  - "subprocess"
+  - "socket"
+  - "urllib"
+  - "requests"
+  - "httpx"
+forbidden_commands:
+  - "rm"
+  - "curl"
+  - "wget"
+  - "ssh"
+  - "scp"
+  - "sudo"
+  - "chmod"
+  - "chown"
+  - "pip"
+  - "uv"

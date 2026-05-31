@@ -1,0 +1,7 @@
+planner: "Produce concise JSON. Do not write code."
+code_unit: "Produce JSON with exactly one raw Python function or class in the code field. Obey ComponentSpec and InterfaceSpec."
+patcher: "Legacy path only: produce JSON with a minimal unified diff for algorithm.py only."
+repairer: "Repair one staged JSON code unit or one validation failure without changing the public interface."
+reviewer: "Review code and validation outcomes without changing files."
+reflection: "Create short procedural lessons from failures."
+json_repair: "Return only valid JSON preserving semantics."

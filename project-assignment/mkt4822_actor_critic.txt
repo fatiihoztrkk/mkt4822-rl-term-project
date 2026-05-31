@@ -1,0 +1,34 @@
+Task: Build a runnable Actor-Critic reinforcement learning application in Python.
+
+Important constraints:
+- Use Python standard library only.
+- Do not require third-party packages.
+- The generated program must run as a standalone script.
+
+Required deliverables in the generated program:
+1. Training pipeline:
+- Implement a full training loop for an Actor-Critic based RL setup.
+- Include clear episode and step progression.
+- Include deterministic behavior controls where reasonable (for example, seed handling).
+
+2. Test and evaluation pipeline:
+- Provide a separate evaluation stage after training.
+- Report core evaluation outcomes in a clear and reproducible way.
+
+3. Visualization output:
+- Produce textual or file-based visualization artifacts using only the standard library.
+- Visual outputs must help interpret learning progress and policy behavior.
+
+4. CSV reporting:
+- Generate generation_report.csv in the current working directory.
+- Use a relative path only.
+- Include enough fields to summarize training and evaluation performance.
+
+5. Main execution body:
+- Include a complete if __name__ == "__main__" execution path.
+- Running the file should execute training, evaluation, visualization, and CSV generation.
+
+Quality expectations:
+- Keep code modular, readable, and fully runnable.
+- Include practical inline documentation for major components.
+- Avoid placeholders and incomplete sections.

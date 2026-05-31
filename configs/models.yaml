@@ -1,0 +1,89 @@
+default_model: "qwen3:4b"
+fallback_model: "qwen3:4b"
+base_url: "http://localhost:11434"
+default_options:
+  num_ctx: 4096
+  repeat_penalty: 1.05
+  top_p: 0.65
+profiles:
+  planner:
+    model: "qwen3:4b"
+    think: false
+    temperature: 0.05
+    top_p: 0.65
+    repeat_penalty: 1.05
+    num_ctx: 4096
+    num_predict: 768
+    keep_alive: "30s"
+  code_unit:
+    model: "qwen3:4b"
+    think: false
+    temperature: 0.02
+    top_p: 0.55
+    repeat_penalty: 1.05
+    num_ctx: 4096
+    num_predict: 1280
+    keep_alive: "30s"
+  patcher:
+    model: "qwen3:4b"
+    think: false
+    temperature: 0.02
+    top_p: 0.55
+    repeat_penalty: 1.05
+    num_ctx: 4096
+    num_predict: 1280
+    keep_alive: "30s"
+  repairer:
+    model: "qwen3:4b"
+    think: false
+    temperature: 0.01
+    top_p: 0.50
+    repeat_penalty: 1.05
+    num_ctx: 4096
+    num_predict: 1024
+    keep_alive: "30s"
+  reviewer:
+    model: "qwen3:4b"
+    think: false
+    temperature: 0.05
+    top_p: 0.65
+    repeat_penalty: 1.05
+    num_ctx: 4096
+    num_predict: 768
+    keep_alive: "30s"
+  reflection:
+    model: "qwen3:4b"
+    think: false
+    temperature: 0.05
+    top_p: 0.65
+    repeat_penalty: 1.05
+    num_ctx: 4096
+    num_predict: 512
+    keep_alive: "30s"
+  json_repair:
+    model: "qwen3:4b"
+    think: false
+    temperature: 0.00
+    top_p: 0.40
+    repeat_penalty: 1.05
+    num_ctx: 4096
+    num_predict: 768
+    keep_alive: "30s"
+  thinking:
+    model: "qwen3:4b"
+    think: true
+    temperature: 0.40
+    top_p: 0.90
+    repeat_penalty: 1.10
+    num_ctx: 16384
+    num_predict: -1
+    keep_alive: "30m"
+  direct:
+    model: "qwen3:4b"
+    think: true
+    temperature: 0.40
+    top_p: 0.90
+    repeat_penalty: 1.10
+    num_ctx: 16384
+    num_predict: -1
+    keep_alive: "30m"

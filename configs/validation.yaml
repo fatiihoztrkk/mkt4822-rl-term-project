@@ -1,0 +1,13 @@
+target_file: "algorithm.py"
+max_repairs: 3
+commands:
+  syntax: ["python", "-m", "py_compile", "algorithm.py"]
+  ruff_check: ["ruff", "check", "."]
+  ruff_format: ["ruff", "format", "--check", "."]
+  pyright: ["pyright"]
+  pytest: ["pytest", "-q"]
+semantic_threshold: 0.50
+hypothesis:
+  enabled: false
+  max_examples: 50
+  deadline_ms: null

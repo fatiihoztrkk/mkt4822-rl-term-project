@@ -1,0 +1,77 @@
+[build-system]
+requires = ["hatchling>=1.25"]
+build-backend = "hatchling.build"
+
+[project]
+name = "mecha-agent-cli"
+version = "0.1.0"
+description = "Local Ollama/qwen3:4b staged-JSON coding agent CLI."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "Course-Restricted Educational Use License" }
+authors = [{ name = "mecha-agent-cli contributors" }]
+dependencies = [
+  "typer>=0.12",
+  "rich>=13.7",
+  "pydantic>=2.7",
+  "httpx>=0.27",
+  "PyYAML>=6.0",
+  "unidiff>=0.7.5",
+  "pathspec>=0.12"
+]
+
+[project.scripts]
+mecha-agent = "mecha_agent_cli.app.cli:app"
+
+[project.optional-dependencies]
+qwen-agent = ["qwen-agent"]
+dev = [
+  "pytest>=8.0",
+  "pytest-cov>=5.0",
+  "hypothesis>=6.100",
+  "ruff>=0.6",
+  "pyright>=1.1",
+  "respx>=0.21",
+  "freezegun>=1.5"
+]
+all = [
+  "qwen-agent",
+  "GitPython>=3.1",
+  "tree-sitter>=0.22",
+  "tree-sitter-python>=0.21"
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/mecha_agent_cli"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py311"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "N", "SIM", "RUF"]
+ignore = ["B008"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+line-ending = "auto"
+
+[tool.pytest.ini_options]
+minversion = "8.0"
+addopts = "-q"
+testpaths = ["tests"]
+pythonpath = ["src"]
+markers = [
+  "ollama: requires a local Ollama server and installed model",
+]
+
+[tool.coverage.run]
+branch = true
+source = ["mecha_agent_cli"]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = true
+fail_under = 80

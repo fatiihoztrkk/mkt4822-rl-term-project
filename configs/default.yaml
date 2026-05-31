@@ -1,0 +1,28 @@
+repo:
+  target_file: "algorithm.py"
+  max_file_window_lines: 120
+agent:
+  max_steps: 8
+  max_repairs: 3
+  max_total_attempts: 25
+  continue_until_success: false
+  max_duplicate_drafts: 2
+  max_same_failure_streak: 4
+  min_score_improvement: 0.01
+  default_backend: "ollama"
+memory:
+  path: ".mecha-agent/memory.sqlite"
+  top_k_reflections: 3
+  top_k_tasks: 3
+security:
+  allow_test_generation: false
+  allow_multi_file_edit: false
+validation:
+  run_ruff: true
+  run_pyright: true
+  run_pytest: true
+  run_semantic: true
+learning:
+  enabled: false
+  mode: "thompson"
+  persist: true

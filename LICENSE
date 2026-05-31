@@ -1,0 +1,32 @@
+Course-Restricted Educational Use License
+
+Copyright (c) 2026 [Ogretim Uyesi Adi / Kurum Adi]
+
+This repository is distributed for course-internal educational use only.
+It is not an open-source release and no open-source rights are granted.
+
+Permitted use:
+1. Enrolled students and authorized teaching staff may use this repository
+	only within the scope of the designated course.
+2. Local execution, study, and assignment development are permitted only
+	under course rules and instructor guidance.
+
+Prohibited use:
+1. Redistribution, republication, sublicensing, or public hosting of any part
+	of this repository, including modified versions.
+2. Commercial use of the repository contents, in whole or in part.
+3. Prompting external or local LLM tools with ready-made solution code from
+	this repository to auto-generate assignment deliverables (including
+	algorithm.py outputs) in a way that bypasses course learning objectives.
+4. Modifying instructor-protected folders to gain unfair advantage where the
+	course policy marks those locations as non-editable for students.
+
+All rights not explicitly granted are reserved.
+
+THE SOFTWARE AND MATERIALS ARE PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND NONINFRINGEMENT. IN NO
+EVENT SHALL THE AUTHORS OR RIGHTS HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES, OR
+OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT, OR OTHERWISE, ARISING
+FROM, OUT OF, OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
+IN THE SOFTWARE OR COURSE MATERIALS.
