@@ -87,3 +87,12 @@ profiles:
     num_ctx: 16384
     num_predict: -1
     keep_alive: "30m"
+  runtime_direct:
+    model: "qwen3:4b"
+    think: false
+    temperature: 0.15
+    top_p: 0.80
+    repeat_penalty: 1.08
+    num_ctx: 4096
+    num_predict: 4096
+    keep_alive: "30m"

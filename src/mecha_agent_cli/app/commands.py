@@ -208,7 +208,7 @@ def validate_command(repo_root: Path, *, user_request: str = "") -> ValidationRe
 def doctor_command(repo_root: Path, *, backend: str = "ollama") -> DoctorReport:
     """Check runtime dependencies and model availability."""
     config = load_config(repo_root)
-    python_ok = shutil.which("python") is not None
+    python_ok = shutil.which("python") is not None or shutil.which("python3") is not None
     uv_ok = shutil.which("uv") is not None
     git_ok = shutil.which("git") is not None
     ruff_ok = shutil.which("ruff") is not None
