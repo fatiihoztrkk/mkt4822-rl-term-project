@@ -1,8 +1,0 @@
-stage,metric,value
-training,episodes,180
-training,success_rate,0.9778
-training,mean_reward,9.5256
-evaluation,episodes,40
-evaluation,success_rate,1.0000
-evaluation,mean_reward,9.8000
-evaluation,mean_steps,5.0000

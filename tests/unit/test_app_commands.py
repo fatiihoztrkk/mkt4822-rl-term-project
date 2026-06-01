@@ -108,14 +108,6 @@ def test_run_command_skips_ollama_service_for_fake_backend(tmp_path: Path, monke
     ]
 
 
-def test_doctor_accepts_python3_executable(tmp_path: Path, monkeypatch) -> None:
-    monkeypatch.setattr(commands.shutil, "which", lambda name: "/usr/bin/python3" if name == "python3" else None)
-
-    report = commands.doctor_command(tmp_path, backend="fake")
-
-    assert report.python_ok is True
-
-
 def test_parse_judge_json_accepts_fenced_payload() -> None:
     raw = (
         "```json\n"

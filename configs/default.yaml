@@ -26,5 +26,3 @@ learning:
   enabled: false
   mode: "thompson"
   persist: true
-direct:
-  profile_name: "runtime_direct"
