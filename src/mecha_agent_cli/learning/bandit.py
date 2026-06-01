@@ -1,22 +1,40 @@
-"""Placeholder Thompson module for course starter repositories.
-
-This file preserves imports and method signatures while avoiding full
-algorithmic implementation details.
-"""
+"""Contextual bandit with SQLite-backed posterior persistence."""
 
 from __future__ import annotations
 
+import math
 import random
+import sqlite3
 from dataclasses import dataclass
+from datetime import UTC, datetime
 from pathlib import Path
+from typing import cast
 
 from mecha_agent_cli.config.schema import LearningConfig
 from mecha_agent_cli.learning.arm_registry import ARM_REGISTRY, Arm, get_arm
+from mecha_agent_cli.learning.reward import reward_to_beta_update
+
+_SCHEMA_SQL = """
+CREATE TABLE IF NOT EXISTS bandit_arms (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  context_key TEXT NOT NULL,
+  arm_id TEXT NOT NULL,
+  alpha REAL NOT NULL DEFAULT 1.0,
+  beta REAL NOT NULL DEFAULT 1.0,
+  pulls INTEGER NOT NULL DEFAULT 0,
+  cumulative_reward REAL NOT NULL DEFAULT 0.0,
+  last_reward REAL NOT NULL DEFAULT 0.0,
+  last_success INTEGER NOT NULL DEFAULT 0,
+  updated_at TEXT NOT NULL,
+  UNIQUE(context_key, arm_id)
+);
+CREATE INDEX IF NOT EXISTS idx_bandit_arms_ctx ON bandit_arms(context_key);
+"""
 
 
 @dataclass(frozen=True)
 class ArmStat:
-    """Minimal bookkeeping for one ``(context, arm)`` pair."""
+    """Posterior statistics for one context and model-profile arm."""
 
     context_key: str
     arm_id: str
@@ -29,42 +47,102 @@ class ArmStat:
 
     @property
     def mean(self) -> float:
-        """Return a stable pseudo-mean for placeholder mode."""
+        """Return the Beta posterior mean."""
         return self.alpha / (self.alpha + self.beta)
 
 
 class BanditStore:
-    """In-memory placeholder storage facade.
-
-    ``db_path`` is retained for API compatibility only.
-    """
+    """Persist arm posteriors in SQLite or memory."""
 
     def __init__(self, db_path: Path | None) -> None:
         self.db_path = db_path
         self._rows: dict[tuple[str, str], ArmStat] = {}
+        if db_path is not None:
+            db_path.parent.mkdir(parents=True, exist_ok=True)
+            with self._connect() as conn:
+                conn.executescript(_SCHEMA_SQL)
+
+    def _connect(self) -> sqlite3.Connection:
+        if self.db_path is None:
+            raise RuntimeError("in-memory store has no SQLite connection")
+        return sqlite3.connect(self.db_path)
 
     def fetch(self, context_key: str) -> dict[str, ArmStat]:
-        """Return placeholder rows for ``context_key`` keyed by ``arm_id``."""
-        out: dict[str, ArmStat] = {}
-        for (ctx, arm_id), stat in self._rows.items():
-            if ctx == context_key:
-                out[arm_id] = stat
-        return out
+        """Return statistics for ``context_key`` keyed by arm identifier."""
+        if self.db_path is None:
+            return {arm_id: stat for (ctx, arm_id), stat in self._rows.items() if ctx == context_key}
+        with self._connect() as conn:
+            rows = conn.execute(
+                """
+                SELECT arm_id, alpha, beta, pulls, cumulative_reward, last_reward, last_success
+                FROM bandit_arms WHERE context_key = ?
+                """,
+                (context_key,),
+            ).fetchall()
+        return {str(row[0]): _row_to_stat(context_key, row) for row in rows}
 
     def upsert(self, stat: ArmStat) -> None:
-        """Insert or update one placeholder row."""
-        self._rows[(stat.context_key, stat.arm_id)] = stat
+        """Insert or replace one arm posterior."""
+        if self.db_path is None:
+            self._rows[(stat.context_key, stat.arm_id)] = stat
+            return
+        with self._connect() as conn:
+            conn.execute(
+                """
+                INSERT INTO bandit_arms(
+                  context_key, arm_id, alpha, beta, pulls, cumulative_reward,
+                  last_reward, last_success, updated_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT(context_key, arm_id) DO UPDATE SET
+                  alpha = excluded.alpha,
+                  beta = excluded.beta,
+                  pulls = excluded.pulls,
+                  cumulative_reward = excluded.cumulative_reward,
+                  last_reward = excluded.last_reward,
+                  last_success = excluded.last_success,
+                  updated_at = excluded.updated_at
+                """,
+                (
+                    stat.context_key,
+                    stat.arm_id,
+                    stat.alpha,
+                    stat.beta,
+                    stat.pulls,
+                    stat.cumulative_reward,
+                    stat.last_reward,
+                    int(stat.last_success),
+                    datetime.now(UTC).isoformat(),
+                ),
+            )
 
     def all_rows(self) -> list[ArmStat]:
-        """Return all placeholder rows."""
-        return list(self._rows.values())
+        """Return every stored posterior."""
+        if self.db_path is None:
+            return list(self._rows.values())
+        with self._connect() as conn:
+            rows = conn.execute(
+                """
+                SELECT context_key, arm_id, alpha, beta, pulls, cumulative_reward, last_reward, last_success
+                FROM bandit_arms
+                """
+            ).fetchall()
+        return [
+            ArmStat(
+                context_key=str(row[0]),
+                arm_id=str(row[1]),
+                alpha=float(row[2]),
+                beta=float(row[3]),
+                pulls=int(row[4]),
+                cumulative_reward=float(row[5]),
+                last_reward=float(row[6]),
+                last_success=bool(row[7]),
+            )
+            for row in rows
+        ]
 
 
 class ThompsonBandit:
-    """Placeholder Thompson controller.
-
-    Selection returns baseline arm; updates only maintain simple counters.
-    """
+    """Select model profiles with Thompson sampling, UCB1, or epsilon-greedy."""
 
     BASELINE_ARM_ID = "direct.baseline"
 
@@ -79,47 +157,78 @@ class ThompsonBandit:
         self.store = store
         self.cfg = cfg
         self.arms = arms
-        self._arm_ids = tuple(a.arm_id for a in arms)
         self.rng = rng or random.Random()
 
-    # -- selection -------------------------------------------------------
-
     def select(self, context_key: str) -> Arm:
-        """Return baseline arm in placeholder mode."""
-        del context_key
-        return get_arm(self.BASELINE_ARM_ID)
+        """Select an arm for ``context_key`` according to configured mode."""
+        if self.cfg.mode == "off":
+            return get_arm(self.BASELINE_ARM_ID)
+        stats = self.store.fetch(context_key)
+        under_pulled = [
+            arm
+            for arm in self.arms
+            if stats.get(arm.arm_id, _zero_stat(context_key, arm.arm_id)).pulls < self.cfg.min_pulls_before_exploit
+        ]
+        if under_pulled:
+            return self.rng.choice(under_pulled)
+        if self.cfg.mode == "ucb1":
+            return max(self.arms, key=lambda arm: self._ucb1_score(stats, context_key, arm))
+        if self.cfg.mode == "greedy":
+            if self.rng.random() < self.cfg.epsilon:
+                return self.rng.choice(self.arms)
+            return max(self.arms, key=lambda arm: stats.get(arm.arm_id, _zero_stat(context_key, arm.arm_id)).mean)
+        return max(
+            self.arms,
+            key=lambda arm: self.rng.betavariate(
+                stats.get(arm.arm_id, _zero_stat(context_key, arm.arm_id)).alpha,
+                stats.get(arm.arm_id, _zero_stat(context_key, arm.arm_id)).beta,
+            ),
+        )
 
-    # -- update ----------------------------------------------------------
+    def _ucb1_score(self, stats: dict[str, ArmStat], context_key: str, arm: Arm) -> float:
+        stat = stats.get(arm.arm_id, _zero_stat(context_key, arm.arm_id))
+        if stat.pulls == 0:
+            return math.inf
+        total_pulls = max(1, sum(item.pulls for item in stats.values()))
+        return stat.mean + self.cfg.ucb_c * math.sqrt(math.log(total_pulls) / stat.pulls)
 
     def update(self, *, context_key: str, arm_id: str, reward: float, success: bool) -> ArmStat:
-        """Record a minimal placeholder update and return stat."""
+        """Apply one reward observation to an arm posterior."""
         prior = self.store.fetch(context_key).get(arm_id, _zero_stat(context_key, arm_id))
-        new = ArmStat(
+        pseudo_success = reward_to_beta_update(reward)
+        stat = ArmStat(
             context_key=context_key,
             arm_id=arm_id,
-            alpha=prior.alpha,
-            beta=prior.beta,
+            alpha=1.0 + (prior.alpha - 1.0) * self.cfg.decay_factor + pseudo_success,
+            beta=1.0 + (prior.beta - 1.0) * self.cfg.decay_factor + (1.0 - pseudo_success),
             pulls=prior.pulls + 1,
             cumulative_reward=prior.cumulative_reward + reward,
             last_reward=reward,
             last_success=success,
         )
-        self.store.upsert(new)
-        return new
+        self.store.upsert(stat)
+        return stat
 
 
-def _zero_stat(context_key: str, arm_id: str) -> ArmStat:
-    """Return a default stat for an unseen ``(context_key, arm_id)``."""
+def _row_to_stat(context_key: str, row: tuple[object, ...]) -> ArmStat:
+    arm_id, alpha, beta, pulls, cumulative_reward, last_reward, last_success = cast(
+        tuple[str, float, float, int, float, float, int],
+        row,
+    )
     return ArmStat(
         context_key=context_key,
         arm_id=arm_id,
-        alpha=1.0,
-        beta=1.0,
-        pulls=0,
-        cumulative_reward=0.0,
-        last_reward=0.0,
-        last_success=False,
+        alpha=alpha,
+        beta=beta,
+        pulls=pulls,
+        cumulative_reward=cumulative_reward,
+        last_reward=last_reward,
+        last_success=bool(last_success),
     )
+
+
+def _zero_stat(context_key: str, arm_id: str) -> ArmStat:
+    return ArmStat(context_key, arm_id, 1.0, 1.0, 0, 0.0, 0.0, False)
 
 
 __all__ = ["ArmStat", "BanditStore", "ThompsonBandit"]

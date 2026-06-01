@@ -1,9 +1,4 @@
-"""Placeholder arm registry for course starter repositories.
-
-This module intentionally provides only a minimal, import-safe action
-registry. Students are expected to design and implement the real action
-space as part of the learning assignment.
-"""
+"""Model-profile action registry for the contextual bandit."""
 
 from __future__ import annotations
 
@@ -15,7 +10,7 @@ from mecha_agent_cli.config.schema import ModelProfile
 
 @dataclass(frozen=True)
 class Arm:
-    """Minimal action descriptor used by placeholder learning modules."""
+    """One model-profile override the contextual bandit may select."""
 
     arm_id: str
     profile_name: str
@@ -23,33 +18,40 @@ class Arm:
     description: str = ""
 
     def apply(self, base: ModelProfile) -> ModelProfile:
-        """Return ``base`` unchanged in placeholder mode."""
-        del self
-        return base
+        """Return a copied profile with this arm's validated overrides."""
+        unknown = set(self.overrides) - set(type(base).model_fields)
+        if unknown:
+            names = ", ".join(sorted(unknown))
+            raise ValueError(f"Unknown ModelProfile field(s): {names}")
+        return base.model_copy(update=self.overrides)
 
 
 ARM_REGISTRY: tuple[Arm, ...] = (
-    Arm(
-        arm_id="direct.baseline",
-        profile_name="direct",
-        overrides={},
-        description="Placeholder baseline arm.",
-    ),
+    Arm("direct.baseline", "direct", {}, "Unmodified direct-generation profile."),
+    Arm("direct.cool", "direct", {"temperature": 0.2, "top_p": 0.85}, "Lower-temperature generation."),
+    Arm("direct.cold", "direct", {"temperature": 0.1, "top_p": 0.75}, "Highly conservative generation."),
+    Arm("direct.warm", "direct", {"temperature": 0.6, "top_p": 0.92}, "Moderately exploratory generation."),
+    Arm("direct.hot", "direct", {"temperature": 0.8, "top_p": 0.95}, "Exploratory generation."),
+    Arm("direct.tight_topk", "direct", {"top_k": 20}, "Restrict token sampling breadth."),
+    Arm("direct.broad_topk", "direct", {"top_k": 80}, "Expand token sampling breadth."),
+    Arm("direct.high_repeat", "direct", {"repeat_penalty": 1.2}, "Discourage repetitive output."),
+    Arm("direct.no_think", "direct", {"think": False}, "Generate without streamed reasoning."),
+    Arm("direct.fixed_seed", "direct", {"seed": 42}, "Use deterministic model sampling."),
 )
 
 _BY_ID: dict[str, Arm] = {arm.arm_id: arm for arm in ARM_REGISTRY}
 
 
 def get_arm(arm_id: str) -> Arm:
-    """Return the arm with id ``arm_id`` or raise :class:`KeyError`."""
-    if arm_id not in _BY_ID:
-        msg = f"Unknown arm_id: {arm_id!r}"
-        raise KeyError(msg)
-    return _BY_ID[arm_id]
+    """Return the registered arm with ``arm_id``."""
+    try:
+        return _BY_ID[arm_id]
+    except KeyError as exc:
+        raise KeyError(f"Unknown arm_id: {arm_id!r}") from exc
 
 
 def list_arm_ids() -> list[str]:
-    """Return all registered arm ids in registration order."""
+    """Return registered arm identifiers in selection order."""
     return [arm.arm_id for arm in ARM_REGISTRY]
 
 
