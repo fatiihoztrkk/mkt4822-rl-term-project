@@ -14,6 +14,8 @@ def task_family(user_request: str) -> str:
         return "signal_filter"
     if "numerical" in request or "matrix" in request or "linear system" in request:
         return "numerical"
+    if "q-learning" in request or "q learning" in request:
+        return "rl_q_learning"
     if "actor-critic" in request or "actor critic" in request or "reinforcement learning" in request:
         return "rl_actor_critic"
     if "graph" in request or "bfs" in request or "shortest path" in request:

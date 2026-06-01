@@ -7,6 +7,17 @@ from typing import Any
 
 from mecha_agent_cli.config.schema import ModelProfile
 
+_BOUNDED_DIRECT: dict[str, Any] = {
+    "think": False,
+    "num_ctx": 4096,
+    "num_predict": 4096,
+}
+
+
+def _bounded(**overrides: Any) -> dict[str, Any]:
+    """Return stable low-VRAM direct-generation options plus arm overrides."""
+    return {**_BOUNDED_DIRECT, **overrides}
+
 
 @dataclass(frozen=True)
 class Arm:
@@ -27,16 +38,16 @@ class Arm:
 
 
 ARM_REGISTRY: tuple[Arm, ...] = (
-    Arm("direct.baseline", "direct", {}, "Unmodified direct-generation profile."),
-    Arm("direct.cool", "direct", {"temperature": 0.2, "top_p": 0.85}, "Lower-temperature generation."),
-    Arm("direct.cold", "direct", {"temperature": 0.1, "top_p": 0.75}, "Highly conservative generation."),
-    Arm("direct.warm", "direct", {"temperature": 0.6, "top_p": 0.92}, "Moderately exploratory generation."),
-    Arm("direct.hot", "direct", {"temperature": 0.8, "top_p": 0.95}, "Exploratory generation."),
-    Arm("direct.tight_topk", "direct", {"top_k": 20}, "Restrict token sampling breadth."),
-    Arm("direct.broad_topk", "direct", {"top_k": 80}, "Expand token sampling breadth."),
-    Arm("direct.high_repeat", "direct", {"repeat_penalty": 1.2}, "Discourage repetitive output."),
-    Arm("direct.no_think", "direct", {"think": False}, "Generate without streamed reasoning."),
-    Arm("direct.fixed_seed", "direct", {"seed": 42}, "Use deterministic model sampling."),
+    Arm("direct.baseline", "direct", _bounded(), "Bounded low-VRAM direct-generation baseline."),
+    Arm("direct.cool", "direct", _bounded(temperature=0.2, top_p=0.85), "Lower-temperature generation."),
+    Arm("direct.cold", "direct", _bounded(temperature=0.1, top_p=0.75), "Highly conservative generation."),
+    Arm("direct.warm", "direct", _bounded(temperature=0.6, top_p=0.92), "Moderately exploratory generation."),
+    Arm("direct.hot", "direct", _bounded(temperature=0.8, top_p=0.95), "Exploratory generation."),
+    Arm("direct.tight_topk", "direct", _bounded(top_k=20), "Restrict token sampling breadth."),
+    Arm("direct.broad_topk", "direct", _bounded(top_k=80), "Expand token sampling breadth."),
+    Arm("direct.high_repeat", "direct", _bounded(repeat_penalty=1.2), "Discourage repetitive output."),
+    Arm("direct.no_think", "direct", _bounded(num_predict=3072), "Use a shorter bounded output budget."),
+    Arm("direct.fixed_seed", "direct", _bounded(seed=42), "Use deterministic model sampling."),
 )
 
 _BY_ID: dict[str, Arm] = {arm.arm_id: arm for arm in ARM_REGISTRY}

@@ -12,6 +12,7 @@ from typing import cast
 
 from mecha_agent_cli.config.schema import LearningConfig
 from mecha_agent_cli.learning.arm_registry import ARM_REGISTRY, Arm, get_arm
+from mecha_agent_cli.learning.q_learning import QLearningPolicy, QValue
 from mecha_agent_cli.learning.reward import reward_to_beta_update
 
 _SCHEMA_SQL = """
@@ -29,6 +30,16 @@ CREATE TABLE IF NOT EXISTS bandit_arms (
   UNIQUE(context_key, arm_id)
 );
 CREATE INDEX IF NOT EXISTS idx_bandit_arms_ctx ON bandit_arms(context_key);
+CREATE TABLE IF NOT EXISTS q_learning_values (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  context_key TEXT NOT NULL,
+  arm_id TEXT NOT NULL,
+  q_value REAL NOT NULL DEFAULT 0.0,
+  updates INTEGER NOT NULL DEFAULT 0,
+  updated_at TEXT NOT NULL,
+  UNIQUE(context_key, arm_id)
+);
+CREATE INDEX IF NOT EXISTS idx_q_learning_values_ctx ON q_learning_values(context_key);
 """
 
 
@@ -57,6 +68,7 @@ class BanditStore:
     def __init__(self, db_path: Path | None) -> None:
         self.db_path = db_path
         self._rows: dict[tuple[str, str], ArmStat] = {}
+        self._q_rows: dict[tuple[str, str], QValue] = {}
         if db_path is not None:
             db_path.parent.mkdir(parents=True, exist_ok=True)
             with self._connect() as conn:
@@ -140,9 +152,55 @@ class BanditStore:
             for row in rows
         ]
 
+    def fetch_q_values(self, context_key: str) -> dict[str, QValue]:
+        """Return Q estimates for ``context_key`` keyed by arm identifier."""
+        if self.db_path is None:
+            return {arm_id: value for (ctx, arm_id), value in self._q_rows.items() if ctx == context_key}
+        with self._connect() as conn:
+            rows = conn.execute(
+                """
+                SELECT arm_id, q_value, updates
+                FROM q_learning_values WHERE context_key = ?
+                """,
+                (context_key,),
+            ).fetchall()
+        return {
+            str(row[0]): QValue(
+                context_key=context_key,
+                arm_id=str(row[0]),
+                value=float(row[1]),
+                updates=int(row[2]),
+            )
+            for row in rows
+        }
+
+    def upsert_q_value(self, value: QValue) -> None:
+        """Insert or replace one tabular Q estimate."""
+        if self.db_path is None:
+            self._q_rows[(value.context_key, value.arm_id)] = value
+            return
+        with self._connect() as conn:
+            conn.execute(
+                """
+                INSERT INTO q_learning_values(context_key, arm_id, q_value, updates, updated_at)
+                VALUES (?, ?, ?, ?, ?)
+                ON CONFLICT(context_key, arm_id) DO UPDATE SET
+                  q_value = excluded.q_value,
+                  updates = excluded.updates,
+                  updated_at = excluded.updated_at
+                """,
+                (
+                    value.context_key,
+                    value.arm_id,
+                    value.value,
+                    value.updates,
+                    datetime.now(UTC).isoformat(),
+                ),
+            )
+
 
 class ThompsonBandit:
-    """Select model profiles with Thompson sampling, UCB1, or epsilon-greedy."""
+    """Select profiles with contextual bandit or tabular Q-learning policies."""
 
     BASELINE_ARM_ID = "direct.baseline"
 
@@ -158,6 +216,7 @@ class ThompsonBandit:
         self.cfg = cfg
         self.arms = arms
         self.rng = rng or random.Random()
+        self.q_learning = QLearningPolicy(epsilon=cfg.epsilon, rng=self.rng)
 
     def select(self, context_key: str) -> Arm:
         """Select an arm for ``context_key`` according to configured mode."""
@@ -171,6 +230,9 @@ class ThompsonBandit:
         ]
         if under_pulled:
             return self.rng.choice(under_pulled)
+        if self.cfg.mode == "q_learning":
+            arm_id = self.q_learning.select([arm.arm_id for arm in self.arms], self.store.fetch_q_values(context_key))
+            return next(arm for arm in self.arms if arm.arm_id == arm_id)
         if self.cfg.mode == "ucb1":
             return max(self.arms, key=lambda arm: self._ucb1_score(stats, context_key, arm))
         if self.cfg.mode == "greedy":
@@ -207,6 +269,14 @@ class ThompsonBandit:
             last_success=success,
         )
         self.store.upsert(stat)
+        q_values = self.store.fetch_q_values(context_key)
+        q_value = self.q_learning.update(
+            context_key=context_key,
+            arm_id=arm_id,
+            reward=reward,
+            prior=q_values.get(arm_id),
+        )
+        self.store.upsert_q_value(q_value)
         return stat
 
 
