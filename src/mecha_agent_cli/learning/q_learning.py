@@ -10,6 +10,7 @@ from __future__ import annotations
 import random
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
+from dataclasses import field as dataclasses_field
 
 
 @dataclass(frozen=True)
@@ -75,4 +76,81 @@ class QLearningPolicy:
         )
 
 
-__all__ = ["QLearningPolicy", "QValue"]
+@dataclass
+class QLearner:
+    """Convenience Q-table agent with internal state management.
+
+    Wraps QLearningPolicy and maintains the full (state, action) → QValue
+    table internally so callers only need state/action strings.
+    """
+
+    alpha: float = 0.25
+    gamma: float = 0.90
+    epsilon: float = 0.10
+    _table: dict[tuple[str, str], QValue] = dataclasses_field(default_factory=dict, repr=False)
+    _policy: QLearningPolicy = dataclasses_field(init=False, repr=False)
+
+    def __post_init__(self) -> None:
+        self._policy = QLearningPolicy(
+            learning_rate=self.alpha,
+            discount_factor=self.gamma,
+            epsilon=self.epsilon,
+        )
+
+    def q_value(self, state: str, action: str) -> float:
+        """Return the current Q-value for a (state, action) pair."""
+        return self._table.get((state, action), QValue(state, action)).value
+
+    def select(self, state: str, actions: list[str], rng: random.Random | None = None) -> str:
+        """Epsilon-greedy arm selection for ``state``."""
+        if not actions:
+            raise ValueError("actions must not be empty")
+        if rng is not None:
+            self._policy.rng = rng
+        values = {a: self._table.get((state, a), QValue(state, a)) for a in actions}
+        return self._policy.select(actions, values)
+
+    def update(
+        self,
+        state: str,
+        action: str,
+        reward: float,
+        next_state: str,
+        next_actions: list[str],
+    ) -> float:
+        """Apply Q-learning update and return the new Q-value."""
+        prior = self._table.get((state, action))
+        next_best = max((self.q_value(next_state, a) for a in next_actions), default=0.0)
+        new_qv = self._policy.update(
+            context_key=state,
+            arm_id=action,
+            reward=reward,
+            prior=prior,
+            next_best_value=next_best,
+        )
+        self._table[(state, action)] = new_qv
+        return new_qv.value
+
+    def reset(self) -> None:
+        """Clear all learned Q-values."""
+        self._table.clear()
+
+
+# ---------------------------------------------------------------------------
+# Backward-compatible placeholder exports
+# ---------------------------------------------------------------------------
+
+@dataclass(frozen=True)
+class QLearningPlaceholder:
+    """Import-safe marker retained for backward compatibility."""
+
+    name: str = "q_learner"
+    status: str = "implemented"
+
+
+def placeholder_status() -> str:
+    """Return module status string."""
+    return "q_learning module: QLearner + QLearningPolicy tabular Q-learning implemented"
+
+
+__all__ = ["QLearner", "QLearningPlaceholder", "QLearningPolicy", "QValue", "placeholder_status"]
