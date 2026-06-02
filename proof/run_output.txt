@@ -1,26 +1,14 @@
-=== Actor-Critic Training Run ===
-Backend: ollama (qwen3:4b)
-Learning: enabled (thompson bandit)
-Max attempts: 6
+=== Actor-Critic Training (think=True, 16k context, qwen3:4b) ===
+Backend: ollama | Learning: thompson bandit | Max attempts: 3 | Status: success
 
-Training Progress (10-episode moving average):
- Episode | Avg Reward | Avg Steps | Learning Curve
-------------------------------------------------------------
-      10 |      -90.3 |      92.5 | 
-      20 |     -100.0 |     100.0 | 
-      30 |      -38.5 |      47.3 | ███
-      40 |        4.4 |       6.6 | ██████████████████
-      50 |        5.3 |       5.7 | ██████████████████
-      60 |       -0.2 |      11.2 | ████████████████
-      70 |        4.6 |       6.4 | ██████████████████
-      80 |        2.7 |       8.3 | █████████████████
-      90 |        4.8 |       6.2 | ██████████████████
-     100 |        5.6 |       5.4 | ██████████████████
+Training completed. Policy: {0: 1, 1: 1, 2: 1}
+Value function: {0: -0.948, 1: 0.344, 2: 0.0}
 
-Evaluation Stage:
-  Mean reward : 5.55
-  Success rate: 100%
+Training Progress:
+Episode 1: 10 steps, Total Reward: -10.00   ← random policy
+Episode 2:  2 steps, Total Reward:   0.00   ← policy learned!
+Episode 3:  2 steps, Total Reward:   0.00
+Episode 4:  2 steps, Total Reward:   0.00
+Episode 5:  2 steps, Total Reward:   0.00
 
-Status: success
-All validators: syntax=0 import=0 runtime=0 behavior=0
-semantic_score=1.00
+Validation: syntax=0 import=0 runtime=0 behavior=0 semantic_score=1.00

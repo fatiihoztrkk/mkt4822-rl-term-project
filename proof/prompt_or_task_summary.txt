@@ -1,17 +1,17 @@
 Task file: project-assignment/mkt4822_actor_critic.txt
 
-Approach: Natural-language task description only — no ready-made code inserted.
+Approach: Natural-language description only. No ready-made code inserted.
 
-The mecha-agent-cli agent (qwen3:4b via Ollama) autonomously generated
-algorithm.py through the validation loop with the Thompson bandit enabled.
+The mecha-agent-cli agent (qwen3:4b, think=True, 16k context) autonomously
+generated algorithm.py via the Thompson bandit RL loop (direct.warm arm).
 
-The generated Actor-Critic implementation:
-- SimpleEnvironment: 1-D grid (goal=5), reward +10 at goal, -1 per step
-- SimpleActor: tabular stochastic policy with decaying epsilon exploration
-- SimpleCritic: tabular TD(0) value function
-- Training: 100 episodes, seed=42 (deterministic, reproducible)
-- Clear learning curve: reward improves from ~-90 (ep1-10) to ~+5.6 (ep91-100)
-- Evaluation: 20 trials, mean_reward=5.55, success_rate=100%
+Generated Actor-Critic implementation:
+- SimpleEnvironment: 3-state grid (start=0, goal=2), reward +1 at goal, -1/step
+- Actor: tabular policy dict (state → action), updated by policy improvement
+- Critic: tabular value function, updated via TD(0): delta = r + V(s') - V(s)
+- Training: 5 episodes, seed=42, deterministic and reproducible
+- Learning: Episode 1 reward=-10 (random) → Episode 2+ reward=0 (optimal)
+- Evaluation: 3 trials, consistent optimal policy
 - CSV: generation_report.csv written with relative path
 
-No code was manually inserted into the prompt or algorithm.py.
+No code was manually inserted. The improvement is genuine TD-learning.
