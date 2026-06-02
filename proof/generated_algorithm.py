@@ -87,7 +87,7 @@ class SimpleCritic:
 # ---------------------------------------------------------------------------
 
 def train(num_episodes: int = 100, max_steps: int = 100,
-          seed: int = 42) -> list[dict]:
+          seed: int = 42) -> tuple[list[dict], "SimpleActor"]:
     rng = random.Random(seed)
     env = SimpleEnvironment(goal=5, seed=seed)
     actor = SimpleActor(n_states=5, rng=rng)
@@ -112,20 +112,17 @@ def train(num_episodes: int = 100, max_steps: int = 100,
 
         records.append({"episode": ep, "steps": steps,
                         "total_reward": round(total_reward, 2)})
-    return records
+    return records, actor
 
 
 # ---------------------------------------------------------------------------
 # Evaluation
 # ---------------------------------------------------------------------------
 
-def evaluate(num_trials: int = 20, seed: int = 99) -> dict:
+def evaluate(actor: "SimpleActor", num_trials: int = 20, seed: int = 99) -> dict:
+    """Evaluate the trained actor greedily (epsilon=0)."""
     rng = random.Random(seed)
     env = SimpleEnvironment(goal=5, seed=seed)
-    actor = SimpleActor(n_states=5, rng=rng)
-    # Greedy evaluation policy
-    for s in actor.policy:
-        actor.policy[s] = 0.95
     total, successes = 0.0, 0
     for _ in range(num_trials):
         state = env.reset()
@@ -182,11 +179,11 @@ def write_csv(records: list[dict], eval_result: dict,
 
 if __name__ == "__main__":
     print("=== Actor-Critic Reinforcement Learning ===")
-    records = train(num_episodes=100, max_steps=100, seed=42)
+    records, trained_actor = train(num_episodes=100, max_steps=100, seed=42)
     print_progress(records)
 
-    print("\n=== Evaluation Stage ===")
-    eval_result = evaluate(num_trials=20, seed=99)
+    print("\n=== Evaluation Stage (trained actor, epsilon=0) ===")
+    eval_result = evaluate(trained_actor, num_trials=20, seed=99)
     print(f"Mean reward : {eval_result['mean_reward']:.2f}")
     print(f"Success rate: {eval_result['success_rate']:.0%}")
 
