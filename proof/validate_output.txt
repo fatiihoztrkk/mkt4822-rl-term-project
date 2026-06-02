@@ -1,0 +1,9 @@
+ syntax: exit=0
+ undefined_name: exit=0
+ spec_contract: exit=0
+ import: exit=0
+ runtime: exit=0
+ behavior: exit=0
+semantic_score=1.00
+total_score=1.00
+primary_failure=UNKNOWN

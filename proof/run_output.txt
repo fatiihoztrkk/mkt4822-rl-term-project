@@ -1,0 +1,26 @@
+=== Actor-Critic Training Run ===
+Backend: ollama (qwen3:4b)
+Learning: enabled (thompson bandit)
+Max attempts: 6
+
+Training Progress (10-episode moving average):
+ Episode | Avg Reward | Avg Steps | Learning Curve
+------------------------------------------------------------
+      10 |      -90.3 |      92.5 | 
+      20 |     -100.0 |     100.0 | 
+      30 |      -38.5 |      47.3 | ███
+      40 |        4.4 |       6.6 | ██████████████████
+      50 |        5.3 |       5.7 | ██████████████████
+      60 |       -0.2 |      11.2 | ████████████████
+      70 |        4.6 |       6.4 | ██████████████████
+      80 |        2.7 |       8.3 | █████████████████
+      90 |        4.8 |       6.2 | ██████████████████
+     100 |        5.6 |       5.4 | ██████████████████
+
+Evaluation Stage:
+  Mean reward : 5.55
+  Success rate: 100%
+
+Status: success
+All validators: syntax=0 import=0 runtime=0 behavior=0
+semantic_score=1.00
