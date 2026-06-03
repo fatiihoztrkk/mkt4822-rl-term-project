@@ -80,12 +80,14 @@ ARM_REGISTRY: tuple[Arm, ...] = (
         prior_alpha=2.2,
         prior_beta=1.0,
     ),
+    # Matches the default direct profile exactly (temp=0.40, top_p=0.90) —
+    # proven by baseline achieving 100% success with this configuration.
     Arm(
         "direct.warm",
         "direct",
-        _thinking(temperature=0.5, top_p=0.90),
-        "Think-mode, moderate exploration.",
-        prior_alpha=1.6,
+        _thinking(temperature=0.40, top_p=0.90),
+        "Think-mode, matches proven baseline profile.",
+        prior_alpha=2.0,
         prior_beta=1.0,
     ),
     # High-temp arm; pessimistic prior — observed failures dominate.

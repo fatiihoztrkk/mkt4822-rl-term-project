@@ -255,23 +255,26 @@ class ThompsonBandit:
             ),
         )
 
-    # Arms that perform well on repair attempts after runtime/import failures.
-    _CONSERVATIVE_ARMS = frozenset({"direct.cold", "direct.cool", "direct.baseline", "direct.high_repeat"})
-    # Arms that consistently fail on repair attempts — avoid after failures.
-    _FAILURE_PRONE_ARMS = frozenset({"direct.fixed_seed", "direct.hot", "direct.no_think"})
+    # Arms that work well as repair arms after a first-attempt failure.
+    # direct.cold is excluded: excellent at a0 but poor at repair (0/3 repair success).
+    _REPAIR_BOOST_ARMS = frozenset({"direct.warm", "direct.baseline", "direct.cool", "direct.high_repeat"})
+    # Arms to penalise in repair context — historically bad at recovering from failures.
+    _REPAIR_PENALTY_ARMS = frozenset({"direct.fixed_seed", "direct.hot", "direct.no_think", "direct.cold"})
 
     def _prior_stat(self, context_key: str, arm: Arm) -> ArmStat:
         """Return a context-adapted informative prior when no stored data exists.
 
-        After a runtime or import failure, conservative low-temperature arms
-        receive a modest alpha boost while historically failure-prone arms
-        receive an additional beta penalty.
+        At repair attempts after a runtime or import failure, arms that match
+        the proven baseline temperature profile (warm, baseline, cool) receive
+        an alpha boost, while arms known to fail at repair receive a beta penalty.
+        direct.cold is intentionally penalised in repair: it is the best first-attempt
+        arm but shows 0 repair successes across all benchmark runs.
         """
         alpha, beta = arm.prior_alpha, arm.prior_beta
         if "|pf:runtime|" in context_key or "|pf:import|" in context_key:
-            if arm.arm_id in self._CONSERVATIVE_ARMS:
-                alpha += 0.5
-            elif arm.arm_id in self._FAILURE_PRONE_ARMS:
+            if arm.arm_id in self._REPAIR_BOOST_ARMS:
+                alpha += 0.6
+            elif arm.arm_id in self._REPAIR_PENALTY_ARMS:
                 beta += 0.8
         return ArmStat(context_key, arm.arm_id, alpha, beta, 0, 0.0, 0.0, False)
 
