@@ -1,0 +1,72 @@
+{
+  "baseline": {
+    "episodes": 6,
+    "success_rate": 1.0,
+    "syntax_pass_rate": 1.0,
+    "import_pass_rate": 1.0,
+    "runtime_pass_rate": 1.0,
+    "mean_attempts": 2.5,
+    "mean_reward": 0.0,
+    "mean_duration_sec": 197.98744762683336,
+    "failure_breakdown": {}
+  },
+  "baseline_per_family": {
+    "rl_actor_critic": {
+      "episodes": 3,
+      "success_rate": 1.0,
+      "syntax_pass_rate": 1.0,
+      "import_pass_rate": 1.0,
+      "runtime_pass_rate": 1.0,
+      "mean_attempts": 2.3333333333333335,
+      "mean_reward": 0.0,
+      "mean_duration_sec": 226.32017190866668,
+      "failure_breakdown": {}
+    },
+    "rl_policy_gradient": {
+      "episodes": 3,
+      "success_rate": 1.0,
+      "syntax_pass_rate": 1.0,
+      "import_pass_rate": 1.0,
+      "runtime_pass_rate": 1.0,
+      "mean_attempts": 2.6666666666666665,
+      "mean_reward": 0.0,
+      "mean_duration_sec": 169.654723345,
+      "failure_breakdown": {}
+    }
+  },
+  "bandit": {
+    "episodes": 6,
+    "success_rate": 1.0,
+    "syntax_pass_rate": 1.0,
+    "import_pass_rate": 1.0,
+    "runtime_pass_rate": 1.0,
+    "mean_attempts": 1.3333333333333333,
+    "mean_reward": 0.9833333333333334,
+    "mean_duration_sec": 83.81158109350004,
+    "failure_breakdown": {}
+  },
+  "bandit_per_family": {
+    "rl_actor_critic": {
+      "episodes": 3,
+      "success_rate": 1.0,
+      "syntax_pass_rate": 1.0,
+      "import_pass_rate": 1.0,
+      "runtime_pass_rate": 1.0,
+      "mean_attempts": 1.0,
+      "mean_reward": 1.0,
+      "mean_duration_sec": 71.38157203066673,
+      "failure_breakdown": {}
+    },
+    "rl_policy_gradient": {
+      "episodes": 3,
+      "success_rate": 1.0,
+      "syntax_pass_rate": 1.0,
+      "import_pass_rate": 1.0,
+      "runtime_pass_rate": 1.0,
+      "mean_attempts": 1.6666666666666667,
+      "mean_reward": 0.9666666666666667,
+      "mean_duration_sec": 96.24159015633336,
+      "failure_breakdown": {}
+    }
+  }
+}
