@@ -223,18 +223,21 @@ class ThompsonBandit:
         if self.cfg.mode == "off":
             return get_arm(self.BASELINE_ARM_ID)
         stats = self.store.fetch(context_key)
-        under_pulled = [
-            arm
-            for arm in self.arms
-            if stats.get(arm.arm_id, self._prior_stat(context_key, arm)).pulls < self.cfg.min_pulls_before_exploit
-        ]
-        if under_pulled:
-            # Use Thompson sampling with arm priors during exploration so
-            # high-quality arms are explored first rather than uniformly at random.
-            return max(
-                under_pulled,
-                key=lambda arm: self.rng.betavariate(arm.prior_alpha, arm.prior_beta),
-            )
+        # Thompson and softmax use informative priors as the prior distribution so
+        # unobserved arms are already distinguished by quality — no forced uniform
+        # exploration phase needed. Other modes (ucb1, greedy, q_learning) keep the
+        # min_pulls_before_exploit guarantee as their exploration mechanism.
+        if self.cfg.mode not in ("thompson", "softmax"):
+            under_pulled = [
+                arm
+                for arm in self.arms
+                if stats.get(arm.arm_id, self._prior_stat(context_key, arm)).pulls < self.cfg.min_pulls_before_exploit
+            ]
+            if under_pulled:
+                return max(
+                    under_pulled,
+                    key=lambda arm: self.rng.betavariate(arm.prior_alpha, arm.prior_beta),
+                )
         if self.cfg.mode == "q_learning":
             arm_id = self.q_learning.select([arm.arm_id for arm in self.arms], self.store.fetch_q_values(context_key))
             return next(arm for arm in self.arms if arm.arm_id == arm_id)
@@ -246,6 +249,7 @@ class ThompsonBandit:
             return max(self.arms, key=lambda arm: stats.get(arm.arm_id, self._prior_stat(context_key, arm)).mean)
         if self.cfg.mode == "softmax":
             return self._softmax_select(stats, context_key)
+        # Thompson (default): pure Bayesian — prior for unseen arms, posterior for observed.
         return max(
             self.arms,
             key=lambda arm: self.rng.betavariate(
