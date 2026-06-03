@@ -54,13 +54,13 @@ class Arm:
 
 
 ARM_REGISTRY: tuple[Arm, ...] = (
-    # Think-mode, moderate temperature — strong prior: reliable for complex code.
+    # Think-mode moderate temperature — strong prior from observed benchmark success.
     Arm(
         "direct.baseline",
         "direct",
         _thinking(temperature=0.3, top_p=0.85),
         "Think-mode baseline, 16k ctx.",
-        prior_alpha=1.8,
+        prior_alpha=1.9,
         prior_beta=1.0,
     ),
     Arm(
@@ -68,16 +68,17 @@ ARM_REGISTRY: tuple[Arm, ...] = (
         "direct",
         _thinking(temperature=0.2, top_p=0.85),
         "Think-mode, low temperature.",
-        prior_alpha=1.8,
+        prior_alpha=1.9,
         prior_beta=1.0,
     ),
+    # Best observed arm: 4 first-attempt successes, 0 first-attempt failures.
     Arm(
         "direct.cold",
         "direct",
         _thinking(temperature=0.1, top_p=0.70),
         "Think-mode, very conservative.",
-        prior_alpha=1.4,
-        prior_beta=1.2,
+        prior_alpha=2.2,
+        prior_beta=1.0,
     ),
     Arm(
         "direct.warm",
@@ -87,14 +88,14 @@ ARM_REGISTRY: tuple[Arm, ...] = (
         prior_alpha=1.6,
         prior_beta=1.0,
     ),
-    # High-temp arm; pessimistic prior discourages early selection for code tasks.
+    # High-temp arm; pessimistic prior — observed failures dominate.
     Arm(
         "direct.hot",
         "direct",
         _thinking(temperature=0.7, top_p=0.95),
         "Think-mode, exploratory.",
         prior_alpha=1.0,
-        prior_beta=1.8,
+        prior_beta=2.0,
     ),
     Arm(
         "direct.tight_topk",
@@ -109,8 +110,8 @@ ARM_REGISTRY: tuple[Arm, ...] = (
         "direct",
         _thinking(temperature=0.4, top_k=80),
         "Think-mode, broad sampling.",
-        prior_alpha=1.6,
-        prior_beta=1.0,
+        prior_alpha=1.5,
+        prior_beta=1.1,
     ),
     Arm(
         "direct.high_repeat",
@@ -127,15 +128,16 @@ ARM_REGISTRY: tuple[Arm, ...] = (
         _bounded(temperature=0.3, top_p=0.85),
         "Fast-mode, 8k ctx fallback.",
         prior_alpha=1.0,
-        prior_beta=1.4,
+        prior_beta=1.5,
     ),
+    # Deterministic arm; observed 5 failures, 0 successes → strongly pessimistic.
     Arm(
         "direct.fixed_seed",
         "direct",
         _thinking(temperature=0.4, seed=42),
         "Think-mode, deterministic.",
-        prior_alpha=1.5,
-        prior_beta=1.1,
+        prior_alpha=1.0,
+        prior_beta=2.2,
     ),
 )
 

@@ -223,21 +223,18 @@ class ThompsonBandit:
         if self.cfg.mode == "off":
             return get_arm(self.BASELINE_ARM_ID)
         stats = self.store.fetch(context_key)
-        # Thompson and softmax use informative priors as the prior distribution so
-        # unobserved arms are already distinguished by quality — no forced uniform
-        # exploration phase needed. Other modes (ucb1, greedy, q_learning) keep the
-        # min_pulls_before_exploit guarantee as their exploration mechanism.
-        if self.cfg.mode not in ("thompson", "softmax"):
-            under_pulled = [
-                arm
-                for arm in self.arms
-                if stats.get(arm.arm_id, self._prior_stat(context_key, arm)).pulls < self.cfg.min_pulls_before_exploit
-            ]
-            if under_pulled:
-                return max(
-                    under_pulled,
-                    key=lambda arm: self.rng.betavariate(arm.prior_alpha, arm.prior_beta),
-                )
+        under_pulled = [
+            arm
+            for arm in self.arms
+            if stats.get(arm.arm_id, self._prior_stat(context_key, arm)).pulls < self.cfg.min_pulls_before_exploit
+        ]
+        if under_pulled:
+            # During exploration, sample from arm priors so high-quality arms
+            # are tried before low-quality ones.
+            return max(
+                under_pulled,
+                key=lambda arm: self.rng.betavariate(arm.prior_alpha, arm.prior_beta),
+            )
         if self.cfg.mode == "q_learning":
             arm_id = self.q_learning.select([arm.arm_id for arm in self.arms], self.store.fetch_q_values(context_key))
             return next(arm for arm in self.arms if arm.arm_id == arm_id)
@@ -258,9 +255,25 @@ class ThompsonBandit:
             ),
         )
 
+    # Arms that perform well on repair attempts after runtime/import failures.
+    _CONSERVATIVE_ARMS = frozenset({"direct.cold", "direct.cool", "direct.baseline", "direct.high_repeat"})
+    # Arms that consistently fail on repair attempts — avoid after failures.
+    _FAILURE_PRONE_ARMS = frozenset({"direct.fixed_seed", "direct.hot", "direct.no_think"})
+
     def _prior_stat(self, context_key: str, arm: Arm) -> ArmStat:
-        """Return an arm-specific informative prior when no stored data exists."""
-        return ArmStat(context_key, arm.arm_id, arm.prior_alpha, arm.prior_beta, 0, 0.0, 0.0, False)
+        """Return a context-adapted informative prior when no stored data exists.
+
+        After a runtime or import failure, conservative low-temperature arms
+        receive a modest alpha boost while historically failure-prone arms
+        receive an additional beta penalty.
+        """
+        alpha, beta = arm.prior_alpha, arm.prior_beta
+        if "|pf:runtime|" in context_key or "|pf:import|" in context_key:
+            if arm.arm_id in self._CONSERVATIVE_ARMS:
+                alpha += 0.5
+            elif arm.arm_id in self._FAILURE_PRONE_ARMS:
+                beta += 0.8
+        return ArmStat(context_key, arm.arm_id, alpha, beta, 0, 0.0, 0.0, False)
 
     def _ucb1_score(self, stats: dict[str, ArmStat], context_key: str, arm: Arm) -> float:
         stat = stats.get(arm.arm_id, self._prior_stat(context_key, arm))
