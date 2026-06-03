@@ -7,16 +7,30 @@ from typing import Any
 
 from mecha_agent_cli.config.schema import ModelProfile
 
+# RTX 3090 (24 GB VRAM) allows much larger context than the conservative 3060 defaults.
 _BOUNDED_DIRECT: dict[str, Any] = {
     "think": False,
-    "num_ctx": 4096,
-    "num_predict": 4096,
+    "num_ctx": 8192,
+    "num_predict": 6144,
+}
+
+# Thinking-mode profile: model reasons first, then generates code.
+# Uses 16k context with unlimited output — best for complex multi-component code.
+_THINKING_DIRECT: dict[str, Any] = {
+    "think": True,
+    "num_ctx": 16384,
+    "num_predict": -1,
 }
 
 
 def _bounded(**overrides: Any) -> dict[str, Any]:
-    """Return stable low-VRAM direct-generation options plus arm overrides."""
+    """Return RTX-3090-tuned generation options plus arm overrides."""
     return {**_BOUNDED_DIRECT, **overrides}
+
+
+def _thinking(**overrides: Any) -> dict[str, Any]:
+    """Return thinking-mode generation options with 16k context."""
+    return {**_THINKING_DIRECT, **overrides}
 
 
 @dataclass(frozen=True)
@@ -27,6 +41,8 @@ class Arm:
     profile_name: str
     overrides: dict[str, Any] = field(default_factory=dict[str, Any])
     description: str = ""
+    prior_alpha: float = 1.0
+    prior_beta: float = 1.0
 
     def apply(self, base: ModelProfile) -> ModelProfile:
         """Return a copied profile with this arm's validated overrides."""
@@ -38,16 +54,89 @@ class Arm:
 
 
 ARM_REGISTRY: tuple[Arm, ...] = (
-    Arm("direct.baseline", "direct", _bounded(), "Bounded low-VRAM direct-generation baseline."),
-    Arm("direct.cool", "direct", _bounded(temperature=0.2, top_p=0.85), "Lower-temperature generation."),
-    Arm("direct.cold", "direct", _bounded(temperature=0.1, top_p=0.75), "Highly conservative generation."),
-    Arm("direct.warm", "direct", _bounded(temperature=0.6, top_p=0.92), "Moderately exploratory generation."),
-    Arm("direct.hot", "direct", _bounded(temperature=0.8, top_p=0.95), "Exploratory generation."),
-    Arm("direct.tight_topk", "direct", _bounded(top_k=20), "Restrict token sampling breadth."),
-    Arm("direct.broad_topk", "direct", _bounded(top_k=80), "Expand token sampling breadth."),
-    Arm("direct.high_repeat", "direct", _bounded(repeat_penalty=1.2), "Discourage repetitive output."),
-    Arm("direct.no_think", "direct", _bounded(num_predict=3072), "Use a shorter bounded output budget."),
-    Arm("direct.fixed_seed", "direct", _bounded(seed=42), "Use deterministic model sampling."),
+    # Think-mode, moderate temperature — strong prior: reliable for complex code.
+    Arm(
+        "direct.baseline",
+        "direct",
+        _thinking(temperature=0.3, top_p=0.85),
+        "Think-mode baseline, 16k ctx.",
+        prior_alpha=1.8,
+        prior_beta=1.0,
+    ),
+    Arm(
+        "direct.cool",
+        "direct",
+        _thinking(temperature=0.2, top_p=0.85),
+        "Think-mode, low temperature.",
+        prior_alpha=1.8,
+        prior_beta=1.0,
+    ),
+    Arm(
+        "direct.cold",
+        "direct",
+        _thinking(temperature=0.1, top_p=0.70),
+        "Think-mode, very conservative.",
+        prior_alpha=1.4,
+        prior_beta=1.2,
+    ),
+    Arm(
+        "direct.warm",
+        "direct",
+        _thinking(temperature=0.5, top_p=0.90),
+        "Think-mode, moderate exploration.",
+        prior_alpha=1.6,
+        prior_beta=1.0,
+    ),
+    # High-temp arm; pessimistic prior discourages early selection for code tasks.
+    Arm(
+        "direct.hot",
+        "direct",
+        _thinking(temperature=0.7, top_p=0.95),
+        "Think-mode, exploratory.",
+        prior_alpha=1.0,
+        prior_beta=1.8,
+    ),
+    Arm(
+        "direct.tight_topk",
+        "direct",
+        _thinking(temperature=0.3, top_k=20),
+        "Think-mode, tight sampling.",
+        prior_alpha=1.5,
+        prior_beta=1.1,
+    ),
+    Arm(
+        "direct.broad_topk",
+        "direct",
+        _thinking(temperature=0.4, top_k=80),
+        "Think-mode, broad sampling.",
+        prior_alpha=1.6,
+        prior_beta=1.0,
+    ),
+    Arm(
+        "direct.high_repeat",
+        "direct",
+        _thinking(temperature=0.3, repeat_penalty=1.15),
+        "Think-mode, less repetition.",
+        prior_alpha=1.6,
+        prior_beta=1.0,
+    ),
+    # Non-thinking fallback — weaker prior: smaller ctx, no reasoning chain.
+    Arm(
+        "direct.no_think",
+        "direct",
+        _bounded(temperature=0.3, top_p=0.85),
+        "Fast-mode, 8k ctx fallback.",
+        prior_alpha=1.0,
+        prior_beta=1.4,
+    ),
+    Arm(
+        "direct.fixed_seed",
+        "direct",
+        _thinking(temperature=0.4, seed=42),
+        "Think-mode, deterministic.",
+        prior_alpha=1.5,
+        prior_beta=1.1,
+    ),
 )
 
 _BY_ID: dict[str, Arm] = {arm.arm_id: arm for arm in ARM_REGISTRY}

@@ -226,7 +226,7 @@ class ThompsonBandit:
         under_pulled = [
             arm
             for arm in self.arms
-            if stats.get(arm.arm_id, _zero_stat(context_key, arm.arm_id)).pulls < self.cfg.min_pulls_before_exploit
+            if stats.get(arm.arm_id, self._prior_stat(context_key, arm)).pulls < self.cfg.min_pulls_before_exploit
         ]
         if under_pulled:
             return self.rng.choice(under_pulled)
@@ -238,21 +238,38 @@ class ThompsonBandit:
         if self.cfg.mode == "greedy":
             if self.rng.random() < self.cfg.epsilon:
                 return self.rng.choice(self.arms)
-            return max(self.arms, key=lambda arm: stats.get(arm.arm_id, _zero_stat(context_key, arm.arm_id)).mean)
+            return max(self.arms, key=lambda arm: stats.get(arm.arm_id, self._prior_stat(context_key, arm)).mean)
+        if self.cfg.mode == "softmax":
+            return self._softmax_select(stats, context_key)
         return max(
             self.arms,
             key=lambda arm: self.rng.betavariate(
-                stats.get(arm.arm_id, _zero_stat(context_key, arm.arm_id)).alpha,
-                stats.get(arm.arm_id, _zero_stat(context_key, arm.arm_id)).beta,
+                stats.get(arm.arm_id, self._prior_stat(context_key, arm)).alpha,
+                stats.get(arm.arm_id, self._prior_stat(context_key, arm)).beta,
             ),
         )
 
+    def _prior_stat(self, context_key: str, arm: Arm) -> ArmStat:
+        """Return an arm-specific informative prior when no stored data exists."""
+        return ArmStat(context_key, arm.arm_id, arm.prior_alpha, arm.prior_beta, 0, 0.0, 0.0, False)
+
     def _ucb1_score(self, stats: dict[str, ArmStat], context_key: str, arm: Arm) -> float:
-        stat = stats.get(arm.arm_id, _zero_stat(context_key, arm.arm_id))
+        stat = stats.get(arm.arm_id, self._prior_stat(context_key, arm))
         if stat.pulls == 0:
             return math.inf
         total_pulls = max(1, sum(item.pulls for item in stats.values()))
         return stat.mean + self.cfg.ucb_c * math.sqrt(math.log(total_pulls) / stat.pulls)
+
+    def _softmax_select(self, stats: dict[str, ArmStat], context_key: str) -> Arm:
+        """Boltzmann/softmax arm selection using ucb_c as inverse temperature."""
+        temperature = max(0.01, self.cfg.ucb_c)
+        means = [stats.get(arm.arm_id, self._prior_stat(context_key, arm)).mean for arm in self.arms]
+        scaled = [m / temperature for m in means]
+        max_s = max(scaled)
+        exp_s = [math.exp(s - max_s) for s in scaled]
+        total = sum(exp_s)
+        weights = [e / total for e in exp_s]
+        return self.rng.choices(list(self.arms), weights=weights, k=1)[0]
 
     def update(self, *, context_key: str, arm_id: str, reward: float, success: bool) -> ArmStat:
         """Apply one reward observation to an arm posterior."""

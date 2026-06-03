@@ -7,6 +7,7 @@ does not contain generated-algorithm solutions or task-specific prompt code.
 
 from __future__ import annotations
 
+import math
 import random
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
@@ -55,6 +56,21 @@ class QLearningPolicy:
         best_arms = [arm_id for arm_id in arm_ids if values.get(arm_id, QValue("", arm_id)).value == best_value]
         return self.rng.choice(best_arms)
 
+    def select_boltzmann(
+        self, arm_ids: Sequence[str], values: Mapping[str, QValue], *, temperature: float = 1.0
+    ) -> str:
+        """Return an arm using Boltzmann/softmax exploration over Q-values."""
+        if not arm_ids:
+            raise ValueError("arm_ids must not be empty")
+        temp = max(1e-6, temperature)
+        q_vals = [values.get(arm_id, QValue("", arm_id)).value for arm_id in arm_ids]
+        scaled = [v / temp for v in q_vals]
+        max_s = max(scaled)
+        exp_s = [math.exp(s - max_s) for s in scaled]
+        total = sum(exp_s)
+        weights = [e / total for e in exp_s]
+        return self.rng.choices(list(arm_ids), weights=weights, k=1)[0]
+
     def update(
         self,
         *,
@@ -101,6 +117,11 @@ class QLearner:
         """Return the current Q-value for a (state, action) pair."""
         return self._table.get((state, action), QValue(state, action)).value
 
+    def _effective_lr(self, state: str, action: str) -> float:
+        """Return a decaying learning rate: alpha / (1 + decay * n_updates)."""
+        n = (self._table.get((state, action)) or QValue(state, action)).updates
+        return self.alpha / (1.0 + 0.05 * n)
+
     def select(self, state: str, actions: list[str], rng: random.Random | None = None) -> str:
         """Epsilon-greedy arm selection for ``state``."""
         if not actions:
@@ -110,6 +131,13 @@ class QLearner:
         values = {a: self._table.get((state, a), QValue(state, a)) for a in actions}
         return self._policy.select(actions, values)
 
+    def select_boltzmann(self, state: str, actions: list[str], *, temperature: float = 1.0) -> str:
+        """Boltzmann/softmax arm selection for ``state``."""
+        if not actions:
+            raise ValueError("actions must not be empty")
+        values = {a: self._table.get((state, a), QValue(state, a)) for a in actions}
+        return self._policy.select_boltzmann(actions, values, temperature=temperature)
+
     def update(
         self,
         state: str,
@@ -118,10 +146,17 @@ class QLearner:
         next_state: str,
         next_actions: list[str],
     ) -> float:
-        """Apply Q-learning update and return the new Q-value."""
+        """Apply Q-learning update with adaptive learning rate and return the new Q-value."""
         prior = self._table.get((state, action))
         next_best = max((self.q_value(next_state, a) for a in next_actions), default=0.0)
-        new_qv = self._policy.update(
+        effective_alpha = self._effective_lr(state, action)
+        policy = QLearningPolicy(
+            learning_rate=effective_alpha,
+            discount_factor=self._policy.discount_factor,
+            epsilon=self._policy.epsilon,
+            rng=self._policy.rng,
+        )
+        new_qv = policy.update(
             context_key=state,
             arm_id=action,
             reward=reward,
@@ -139,6 +174,7 @@ class QLearner:
 # ---------------------------------------------------------------------------
 # Backward-compatible placeholder exports
 # ---------------------------------------------------------------------------
+
 
 @dataclass(frozen=True)
 class QLearningPlaceholder:

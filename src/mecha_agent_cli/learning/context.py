@@ -14,10 +14,19 @@ def task_family(user_request: str) -> str:
         return "signal_filter"
     if "numerical" in request or "matrix" in request or "linear system" in request:
         return "numerical"
+    # RL sub-families ordered from most to least specific.
+    if "actor-critic" in request or "actor critic" in request or "advantage" in request:
+        return "rl_actor_critic"
+    if "ppo" in request or "proximal policy" in request:
+        return "rl_ppo"
+    if "dqn" in request or "deep q-network" in request or "deep q network" in request:
+        return "rl_dqn"
+    if "policy gradient" in request or "reinforce" in request:
+        return "rl_policy_gradient"
     if "q-learning" in request or "q learning" in request:
         return "rl_q_learning"
-    if "actor-critic" in request or "actor critic" in request or "reinforcement learning" in request:
-        return "rl_actor_critic"
+    if "reinforcement learning" in request or ("reward" in request and "environment" in request):
+        return "rl_generic"
     if "graph" in request or "bfs" in request or "shortest path" in request:
         return "graph"
     if "string" in request or "word" in request or "text" in request:
