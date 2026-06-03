@@ -229,7 +229,12 @@ class ThompsonBandit:
             if stats.get(arm.arm_id, self._prior_stat(context_key, arm)).pulls < self.cfg.min_pulls_before_exploit
         ]
         if under_pulled:
-            return self.rng.choice(under_pulled)
+            # Use Thompson sampling with arm priors during exploration so
+            # high-quality arms are explored first rather than uniformly at random.
+            return max(
+                under_pulled,
+                key=lambda arm: self.rng.betavariate(arm.prior_alpha, arm.prior_beta),
+            )
         if self.cfg.mode == "q_learning":
             arm_id = self.q_learning.select([arm.arm_id for arm in self.arms], self.store.fetch_q_values(context_key))
             return next(arm for arm in self.arms if arm.arm_id == arm_id)

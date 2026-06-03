@@ -1,0 +1,18 @@
+Task: Build a runnable Q-learning reinforcement learning application in Python.
+
+Important constraints:
+- Use Python standard library only.
+- Do not require third-party packages.
+- The generated program must run as a standalone script.
+
+Required deliverables in the generated program:
+1. Implement a deterministic training loop with seed handling.
+2. Run a separate evaluation stage after training.
+3. Produce a textual learning-progress visualization.
+4. Write evaluation metrics to generation_report.csv using a relative path.
+5. Include a complete if __name__ == "__main__" execution path.
+
+Quality expectations:
+- Keep code modular, readable, and fully runnable.
+- Include practical inline documentation for major components.
+- Avoid placeholders and incomplete sections.
