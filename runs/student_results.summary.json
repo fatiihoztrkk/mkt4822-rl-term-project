@@ -1,26 +1,30 @@
 {
   "baseline": {
     "episodes": 6,
-    "success_rate": 1.0,
+    "success_rate": 0.8333333333333334,
     "syntax_pass_rate": 1.0,
     "import_pass_rate": 1.0,
-    "runtime_pass_rate": 1.0,
-    "mean_attempts": 2.5,
+    "runtime_pass_rate": 0.8333333333333334,
+    "mean_attempts": 2.3333333333333335,
     "mean_reward": 0.0,
-    "mean_duration_sec": 197.98744762683336,
-    "failure_breakdown": {}
+    "mean_duration_sec": 214.40087809516686,
+    "failure_breakdown": {
+      "RUNTIME": 1
+    }
   },
   "baseline_per_family": {
     "rl_actor_critic": {
       "episodes": 3,
-      "success_rate": 1.0,
+      "success_rate": 0.6666666666666666,
       "syntax_pass_rate": 1.0,
       "import_pass_rate": 1.0,
-      "runtime_pass_rate": 1.0,
-      "mean_attempts": 2.3333333333333335,
+      "runtime_pass_rate": 0.6666666666666666,
+      "mean_attempts": 2.6666666666666665,
       "mean_reward": 0.0,
-      "mean_duration_sec": 226.32017190866668,
-      "failure_breakdown": {}
+      "mean_duration_sec": 320.17942560933324,
+      "failure_breakdown": {
+        "RUNTIME": 1
+      }
     },
     "rl_policy_gradient": {
       "episodes": 3,
@@ -28,9 +32,9 @@
       "syntax_pass_rate": 1.0,
       "import_pass_rate": 1.0,
       "runtime_pass_rate": 1.0,
-      "mean_attempts": 2.6666666666666665,
+      "mean_attempts": 2.0,
       "mean_reward": 0.0,
-      "mean_duration_sec": 169.654723345,
+      "mean_duration_sec": 108.62233058100053,
       "failure_breakdown": {}
     }
   },
@@ -40,9 +44,9 @@
     "syntax_pass_rate": 1.0,
     "import_pass_rate": 1.0,
     "runtime_pass_rate": 1.0,
-    "mean_attempts": 1.3333333333333333,
-    "mean_reward": 0.9833333333333334,
-    "mean_duration_sec": 83.81158109350004,
+    "mean_attempts": 1.6666666666666667,
+    "mean_reward": 0.9666666666666668,
+    "mean_duration_sec": 85.96378439066636,
     "failure_breakdown": {}
   },
   "bandit_per_family": {
@@ -52,9 +56,9 @@
       "syntax_pass_rate": 1.0,
       "import_pass_rate": 1.0,
       "runtime_pass_rate": 1.0,
-      "mean_attempts": 1.0,
-      "mean_reward": 1.0,
-      "mean_duration_sec": 71.38157203066673,
+      "mean_attempts": 1.3333333333333333,
+      "mean_reward": 0.9833333333333334,
+      "mean_duration_sec": 67.54581767566681,
       "failure_breakdown": {}
     },
     "rl_policy_gradient": {
@@ -63,9 +67,9 @@
       "syntax_pass_rate": 1.0,
       "import_pass_rate": 1.0,
       "runtime_pass_rate": 1.0,
-      "mean_attempts": 1.6666666666666667,
-      "mean_reward": 0.9666666666666667,
-      "mean_duration_sec": 96.24159015633336,
+      "mean_attempts": 2.0,
+      "mean_reward": 0.9500000000000001,
+      "mean_duration_sec": 104.3817511056659,
       "failure_breakdown": {}
     }
   }
