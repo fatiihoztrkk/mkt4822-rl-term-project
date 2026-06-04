@@ -258,24 +258,29 @@ class ThompsonBandit:
     # Arms that work well as repair arms after a first-attempt failure.
     # direct.cold is excluded: excellent at a0 but poor at repair (0/3 repair success).
     _REPAIR_BOOST_ARMS = frozenset({"direct.warm", "direct.baseline", "direct.cool", "direct.high_repeat"})
-    # Arms to penalise in repair context — historically bad at recovering from failures.
-    _REPAIR_PENALTY_ARMS = frozenset({"direct.fixed_seed", "direct.hot", "direct.no_think", "direct.cold"})
+    # Arms to penalise in repair context — observed consistently in failure chains.
+    # direct.tight_topk and direct.broad_topk added after appearing in all 3 failures
+    # of the 8-repeat benchmark run.
+    _REPAIR_PENALTY_ARMS = frozenset(
+        {"direct.fixed_seed", "direct.hot", "direct.no_think", "direct.cold", "direct.tight_topk", "direct.broad_topk"}
+    )
 
     def _prior_stat(self, context_key: str, arm: Arm) -> ArmStat:
         """Return a context-adapted informative prior when no stored data exists.
 
-        At repair attempts after a runtime or import failure, arms that match
-        the proven baseline temperature profile (warm, baseline, cool) receive
-        an alpha boost, while arms known to fail at repair receive a beta penalty.
-        direct.cold is intentionally penalised in repair: it is the best first-attempt
-        arm but shows 0 repair successes across all benchmark runs.
+        After a runtime or import failure, repair-proven arms (warm, baseline,
+        cool, high_repeat) receive a strong alpha boost. Arms observed in failure
+        chains receive a beta penalty. Arms not in either set get a smaller beta
+        nudge to widen the gap toward the boost set.
         """
         alpha, beta = arm.prior_alpha, arm.prior_beta
         if "|pf:runtime|" in context_key or "|pf:import|" in context_key:
             if arm.arm_id in self._REPAIR_BOOST_ARMS:
-                alpha += 0.6
+                alpha += 1.0
             elif arm.arm_id in self._REPAIR_PENALTY_ARMS:
-                beta += 0.8
+                beta += 1.2
+            else:
+                beta += 0.4
         return ArmStat(context_key, arm.arm_id, alpha, beta, 0, 0.0, 0.0, False)
 
     def _ucb1_score(self, stats: dict[str, ArmStat], context_key: str, arm: Arm) -> float:
